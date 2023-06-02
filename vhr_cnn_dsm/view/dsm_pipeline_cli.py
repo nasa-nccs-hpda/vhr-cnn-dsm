@@ -31,8 +31,8 @@ def main():
                         required=True,
                         dest='pipeline_step',
                         help='Pipeline step to perform',
-                        default=['setup', 'preprocess', 'train', 'predict'],
-                        choices=['setup', 'preprocess', 'train', 'predict'])
+                        default=['preprocess', 'train', 'predict'],
+                        choices=['preprocess', 'train', 'predict'])
 
     args = parser.parse_args()
 
@@ -43,8 +43,6 @@ def main():
     pipeline = DSMPipeline(args.config_file)
 
     # Regression CHM pipeline steps
-    if "setup" in args.pipeline_step:
-        pipeline.setup()
     if "preprocess" in args.pipeline_step:
         pipeline.preprocess()
     if "train" in args.pipeline_step:

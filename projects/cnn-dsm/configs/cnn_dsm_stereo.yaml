@@ -5,7 +5,7 @@
 # ----------------------------- General ----------------------------------- #
 # experiment name and type
 experiment_name: stereo
-experiment_type: cnn-dsm-v7
+experiment_type: cnn-dsm-stereo
 
 # seed to avoid randomization across experiments
 seed: 42
@@ -31,7 +31,7 @@ stereo_dirs:
   - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/WV03_20160616_104001001EBDB400_104001001E13F600'
 
 # directory to store models
-model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-v4'
+model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-stereo-v1'
 
 # ------------------------- Setup Configurations -------------------------- #
 
@@ -45,6 +45,8 @@ highres_dsm_regex: 'out-DEM_1m.tif'
 
 # tile size to feed the CNN
 tile_size: 256
+
+n_tiles: 10000
 
 # expand dimension for probability mapping
 expand_dims: True
@@ -128,7 +130,7 @@ prediction_dtype: float32
 prediction_nodata: -10001
 
 #model_filename: '/explore/nobackup/people/jacaraba/projects/CNN_CHM/v2/senegal/models/20-0.00.hdf5'
-inference_save_dir: /explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-v7-mae/results
+inference_save_dir: '${model_dir}/results'
 inference_regex_list:
   - '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/data/WV02_20120924_P1BS_103001001C087E00_103001001CB20900-toa-stacked-clipped.tif'
-  - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/*/*stacked*.tif'
+  - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/*/*-stacked*.tif'

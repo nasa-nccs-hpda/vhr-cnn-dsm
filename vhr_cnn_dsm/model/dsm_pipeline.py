@@ -19,21 +19,9 @@ from multiprocessing import Pool, cpu_count
 from vhr_cnn_dsm.model.config import DSMConfig as Config
 from tensorflow_caney.utils.system import seed_everything
 from tensorflow_caney.model.pipelines.cnn_regression import CNNRegression
-from tensorflow_caney.utils.data import gen_random_tiles
-# from vhr_cnn_chm.model.atl08 import ATL08
-# from tensorflow_caney.utils.vector.extract import \
-#    convert_coords_to_pixel_location, extract_centered_window
-# from tensorflow_caney.utils.data import modify_bands, \
-#    get_dataset_filenames, get_mean_std_dataset, get_mean_std_metadata
-# from tensorflow_caney.utils.system import seed_everything
-# from tensorflow_caney.model.pipelines.cnn_regression import CNNRegression
-# from tensorflow_caney.model.dataloaders.regression import RegressionDataLoader
-# from tensorflow_caney.utils import indices
-# from tensorflow_caney.utils.model import load_model
-# from tensorflow_caney.inference import regression_inference
-# from pygeotools.lib import iolib, warplib
-
-# osgeo.gdal.UseExceptions()
+from tensorflow_caney.utils.data import gen_random_tiles, \
+    get_dataset_filenames, get_mean_std_dataset
+from tensorflow_caney.model.dataloaders.regression import RegressionDataLoader
 
 
 class DSMPipeline(CNNRegression):
@@ -49,12 +37,16 @@ class DSMPipeline(CNNRegression):
         # Configuration file intialization
         self.conf = self._read_config(config_filename, Config)
 
+        # Set experiment name
+        self.experiment_name = self.conf.experiment_name.name
+
         # output directory to store metadata and artifacts
         self.metadata_dir = os.path.join(self.conf.data_dir, 'metadata')
         self.logger.info(f'Metadata dir: {self.metadata_dir}')
 
         # Set output directories and locations
-        self.intermediate_dir = os.path.join(self.conf.data_dir, 'intermediate')
+        self.intermediate_dir = os.path.join(
+            self.conf.data_dir, 'intermediate')
         self.logger.info(f'Intermediate dir: {self.intermediate_dir}')
 
         self.images_dir = os.path.join(self.conf.data_dir, 'images')
@@ -85,7 +77,7 @@ class DSMPipeline(CNNRegression):
                 overwrite: bool = False):
         """
         Stack rasters from list
-        TODO: The overall concat function is extremely slow. Reconsider using
+        Note: The overall concat function is extremely slow. Reconsider using
         other functions to achieve the same result. Consider loading the raster
         to memory to make this step faster.
         """
@@ -109,12 +101,22 @@ class DSMPipeline(CNNRegression):
 
         return merged_raster
 
-    # -------------------------------------------------------------------------
-    # setup
-    # -------------------------------------------------------------------------
-    def setup(self):
+    def get_dsm(self, dsm_regex: str):
+        """
+        Find a and return DSM rioxarray object
+        """
+        dsm_list = glob(dsm_regex)
+        assert len(dsm_list) == 1, \
+            f'{dsm_regex} does not return one element, {dsm_list} found'
+        dsm_raster = rxr.open_rasterio(dsm_list[0])
+        return dsm_raster.where(dsm_raster != -99)
 
-        logging.info('Entering setup step')
+    # -------------------------------------------------------------------------
+    # preprocess
+    # -------------------------------------------------------------------------
+    def preprocess(self):
+
+        logging.info('Entering preprocess step')
 
         # read stereopair, stack stereo pair
         assert len(self.conf.stereo_dirs) > 0, \
@@ -132,112 +134,186 @@ class DSMPipeline(CNNRegression):
             # output filename for stereo pair stack
             output_filename = \
                 f'{Path(stereo_pair_list[0]).with_suffix("")}_stacked.tif'
+        """
+            # -----------------------------------------------------------------
+            # prepare experiments with stereo pairs
+            # -----------------------------------------------------------------
+            if self.experiment_name in ['stereo', 'stereo-disparity']:
 
-            # raster stack of imagery, the first run might take some time
-            # if the rasters are not stacked, after that, rasters are saved
-            # and loaded from memory, helps when repeating the process
-            stereo_pair_raster = self.stack_rasters(
-                stereo_pair_list, output_filename)
-            logging.info(f'Stereo stack shape: {stereo_pair_raster.shape}')
+                # raster stack of imagery, the first run might take some time
+                # if the rasters are not stacked, after that, rasters are saved
+                # and loaded from memory, helps when repeating the process
+                stereo_pair_raster = self.stack_rasters(
+                    stereo_pair_list, output_filename)
+                logging.info(f'Stereo stack shape: {stereo_pair_raster.shape}')
 
-            # get disparity map
-            disparity_map_list = glob(
-                os.path.join(stereo_output_dir, self.conf.disparity_map_regex))
-            assert len(disparity_map_list) == 1, \
-                f'len(disparity_map_list) != 1, {disparity_map_list} found'
-            disparity_map_raster = rxr.open_rasterio(disparity_map_list[0])
-            logging.info(f'Disparity Map shape: {disparity_map_raster.shape}')
+            # -----------------------------------------------------------------
+            # prepare experiments with disparity maps
+            # -----------------------------------------------------------------
+            if self.experiment_name in ['disparity', 'stereo-disparity']:
 
-            # preprocess disparity map and drop the last band if needed
-            if disparity_map_raster.shape[0] > 2:
-                logging.info('Removing angle band from disparity map')
-                disparity_map_raster = disparity_map_raster[:2, :, :]
+                # get disparity map
+                disparity_map_list = glob(
+                    os.path.join(
+                        stereo_output_dir, self.conf.disparity_map_regex))
+                assert len(disparity_map_list) == 1, \
+                    f'len(disparity_map_list) != 1, {disparity_map_list} found'
+                disparity_map_raster = rxr.open_rasterio(disparity_map_list[0])
                 logging.info(
-                    f'New Disparity Map shape: {disparity_map_raster.shape}')
+                    f'Disparity Map shape: {disparity_map_raster.shape}')
 
-            # dsm ground truth preprocessing
-            lowres_dsm_list = glob(
+                # preprocess disparity map and drop the last band if needed
+                if disparity_map_raster.shape[0] > 2:
+                    logging.info('Removing angle band from disparity map')
+                    disparity_map_raster = disparity_map_raster[:2, :, :]
+                    logging.info(
+                        f'New Disparity Map: {disparity_map_raster.shape}')
+
+            # -----------------------------------------------------------------
+            # prepare data stacks depending on the experiments
+            # -----------------------------------------------------------------
+            if self.experiment_name == 'stereo':
+                image = stereo_pair_raster
+                print(image.shape)
+            elif self.experiment_name == 'disparity':
+                image = disparity_map_raster
+                print(image.shape)
+                disparity_output_filename = \
+                    f'{Path(stereo_pair_list[0]).with_suffix("")}' + \
+                    '_disparity.tif'
+                if not os.path.isfile(disparity_output_filename):
+                    logging.info(f'Saving {disparity_output_filename}')
+                    image.rio.to_raster(disparity_output_filename)
+            elif self.experiment_name == 'stereo-disparity':
+
+                # TODO: FIX THE CONCAT OPTION FOR LARGE RASTERS
+
+                #print(stereo_pair_raster.shape, disparity_map_raster.shape)
+                #print(stereo_pair_raster.rio.crs, disparity_map_raster.rio.crs)
+                #disparity_map_raster['band'] = [3, 4]
+                #print(disparity_map_raster)
+                #image = xr.concat(
+                #    [
+                #         stereo_pair_raster,
+                #         disparity_map_raster
+                #    ], dim='band'
+                #)
+                #print(image)
+                #print(stereo_pair_raster.min().values, stereo_pair_raster.max().values)
+                #print(disparity_map_raster.min().values, disparity_map_raster.max().values)
+                #print(image.min().values, image.max().values)
+
+
+                #xr.concat(
+                #    [
+                #        raster_1,
+                #        raster_2.reset_coords('band', drop=True).expand_dims(band=[232]),
+                #    ], dim='band',
+                #)
+                #print(image)
+
+                #stereo_disparity_output_filename = \
+                #    f'{Path(stereo_pair_list[0]).with_suffix("")}' + \
+                #    '_stereo-disparity.tif'
+                #image.rio.to_raster(stereo_disparity_output_filename)
+                #if not os.path.isfile(stereo_disparity_output_filename):
+                #    logging.info(f'Saving {stereo_disparity_output_filename}')
+                #    image.rio.to_raster(stereo_disparity_output_filename)
+
+                # TODO: REMOVE THIS BANDAID
+                disparity_map_list = glob(
+                    os.path.join(
+                        stereo_output_dir, 'stack_all_bands.tif'))
+                assert len(disparity_map_list) == 1, \
+                    f'len(disparity_map_list) != 1, {disparity_map_list} found'
+                disparity_map_raster = rxr.open_rasterio(disparity_map_list[0])
+                logging.info(
+                    f'Disparity Map shape: {disparity_map_raster.shape}')
+                image = disparity_map_raster
+                print(image.shape)
+
+            # -----------------------------------------------------------------
+            # DSM ground truth preprocessing
+            # -----------------------------------------------------------------
+
+            # low res dsm raster
+            lowres_dsm_raster = self.get_dsm(
                 os.path.join(stereo_output_dir, self.conf.lowres_dsm_regex))
-            assert len(lowres_dsm_list) == 1, \
-                f'len(lowres_dsm_list) != 1, {lowres_dsm_list} found'
-            lowres_dsm_raster = rxr.open_rasterio(lowres_dsm_list[0])
             logging.info(f'Low Res DSM shape: {lowres_dsm_raster.shape}')
 
-            midres_dsm_list = glob(
+            # mid res dsm raster
+            midres_dsm_raster = self.get_dsm(
                 os.path.join(stereo_output_dir, self.conf.midres_dsm_regex))
-            assert len(midres_dsm_list) == 1, \
-                f'len(midres_dsm_list) != 1, {midres_dsm_list} found'
-            midres_dsm_raster = rxr.open_rasterio(midres_dsm_list[0])
             logging.info(f'Mid Res DSM shape: {midres_dsm_raster.shape}')
 
-            highres_dsm_list = glob(
+            # mid res dsm raster
+            highres_dsm_raster = self.get_dsm(
                 os.path.join(stereo_output_dir, self.conf.highres_dsm_regex))
-            assert len(highres_dsm_list) == 1, \
-                f'len(highres_dsm_list) != 1, {highres_dsm_list} found'
-            highres_dsm_raster = rxr.open_rasterio(highres_dsm_list[0])
             logging.info(f'High Res DSM shape: {highres_dsm_raster.shape}')
 
-            logging.info(f'low res min max {lowres_dsm_raster.min().values}, {lowres_dsm_raster.max().values}')
-            logging.info(f'mid res min max {midres_dsm_raster.min().values}, {midres_dsm_raster.max().values}')
-            logging.info(f'high res min max {highres_dsm_raster.min().values}, {highres_dsm_raster.max().values}')
+            # -----------------------------------------------------------------
+            # DSM exploratory data analysis
+            # -----------------------------------------------------------------
+            logging.info(
+                f'low res min max {lowres_dsm_raster.min().values}, ' +
+                f'{lowres_dsm_raster.max().values}')
+            logging.info(
+                f'mid res min max {midres_dsm_raster.min().values}, ' +
+                f'{midres_dsm_raster.max().values}')
+            logging.info(
+                f'high res min max {highres_dsm_raster.min().values}, ' +
+                f'{highres_dsm_raster.max().values}')
 
+            # -----------------------------------------------------------------
+            # DSM 1m to match native 0.5 m resolution
+            # -----------------------------------------------------------------
             logging.info(f'{"=" * 5} Stereo DSM Match Disparity Map {"=" * 5}')
-            lowres_dsm_raster = lowres_dsm_raster.rio.reproject_match(
-                disparity_map_raster)
+            lowres_dsm_raster = lowres_dsm_raster.rio.reproject_match(image)
             logging.info(f'Low Res DSM shape: {lowres_dsm_raster.shape}')
 
-            midres_dsm_raster = midres_dsm_raster.rio.reproject_match(
-                disparity_map_raster)
+            midres_dsm_raster = midres_dsm_raster.rio.reproject_match(image)
             logging.info(f'Mid Res DSM shape: {midres_dsm_raster.shape}')
 
-            highres_dsm_raster = highres_dsm_raster.rio.reproject_match(
-                disparity_map_raster)
+            highres_dsm_raster = highres_dsm_raster.rio.reproject_match(image)
             logging.info(f'High Res DSM shape: {highres_dsm_raster.shape}')
 
             # combine DSMs to fill voids in highres DSM
             logging.info(f'{"=" * 5} Stereo DSM Fill Voids {"=" * 5}')
-            lowres_dsm_raster = lowres_dsm_raster.where(lowres_dsm_raster != -99)
-            midres_dsm_raster = midres_dsm_raster.where(midres_dsm_raster != -99)
-            highres_dsm_raster = highres_dsm_raster.where(highres_dsm_raster != -99)
 
-            lowres_output_filename = \
-                f'{Path(stereo_pair_list[0]).with_suffix("")}_lowres_downsampled.tif'
-            lowres_dsm_raster.rio.to_raster(lowres_output_filename)
+            # lowres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_lowres_downsampled.tif'
+            # lowres_dsm_raster.rio.to_raster(lowres_output_filename)
 
-            midres_output_filename = \
-                f'{Path(stereo_pair_list[0]).with_suffix("")}_midres_downsampled.tif'
-            midres_dsm_raster.rio.to_raster(midres_output_filename)
+            # midres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_midres_downsampled.tif'
+            # midres_dsm_raster.rio.to_raster(midres_output_filename)
 
-            highres_output_filename = \
-                f'{Path(stereo_pair_list[0]).with_suffix("")}_highres_downsampled.tif'
-            highres_dsm_raster.rio.to_raster(highres_output_filename)
+            # highres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_highres_downsampled.tif'
+            # highres_dsm_raster.rio.to_raster(highres_output_filename)
 
-            logging.info(f'low res min max {lowres_dsm_raster.min().values}, {lowres_dsm_raster.max().values}')
-            logging.info(f'mid res min max {midres_dsm_raster.min().values}, {midres_dsm_raster.max().values}')
-            logging.info(f'high res min max {highres_dsm_raster.min().values}, {highres_dsm_raster.max().values}')
-
+            # -----------------------------------------------------------------
+            # DSM voids filled by coarser DSMs
+            # -----------------------------------------------------------------
             midres_dsm_raster = midres_dsm_raster.fillna(lowres_dsm_raster)
             highres_dsm_raster = highres_dsm_raster.fillna(midres_dsm_raster)
 
-            logging.info(f'low res min max {lowres_dsm_raster.min().values}, {lowres_dsm_raster.max().values}')
-            logging.info(f'mid res min max {midres_dsm_raster.min().values}, {midres_dsm_raster.max().values}')
-            logging.info(f'high res min max {highres_dsm_raster.min().values}, {highres_dsm_raster.max().values}')
+            # midres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_midres_downsampled_filled.tif'
+            # midres_dsm_raster.rio.to_raster(midres_output_filename)
 
-            # fill void of mid res with low res
-            # fill void of high res with mid res
+            # highres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_highres_downsampled_filled.tif'
+            # highres_dsm_raster.rio.to_raster(highres_output_filename)
 
-            midres_output_filename = \
-                f'{Path(stereo_pair_list[0]).with_suffix("")}_midres_downsampled_filled.tif'
-            midres_dsm_raster.rio.to_raster(midres_output_filename)
+            #highres_output_filename = \
+            #    f'{Path(stereo_pair_list[0]).with_suffix("")}_highres_downsampled_filled-test.tif'
+            #highres_dsm_raster.rio.to_raster(highres_output_filename)
 
-            highres_output_filename = \
-                f'{Path(stereo_pair_list[0]).with_suffix("")}_highres_downsampled_filled.tif'
-            highres_dsm_raster.rio.to_raster(highres_output_filename)
-
-            # TEMPORARY
-            n_tiles = 10000
-
-            image = stereo_pair_raster.values
+            # -----------------------------------------------------------------
+            # Generate invidual chips for training
+            # -----------------------------------------------------------------
+            image = image.values
             label = highres_dsm_raster.values
 
             # Move from chw to hwc, squeze mask if required
@@ -255,7 +331,7 @@ class DSMPipeline(CNNRegression):
             # Modify labels, sometimes we need to merge some training classes
             # label = modify_label_classes(
             #    label, self.conf.modify_labels, self.conf.substract_labels)
-            #logging.info(f'Label classes min {label.min()}, max {label.max()}')
+            # logging.info(f'Label classes min {label.min()}, max {label.max()}')
 
             # generate random tiles
             gen_random_tiles(
@@ -265,7 +341,7 @@ class DSMPipeline(CNNRegression):
                 tile_size=self.conf.tile_size,
                 index_id=index_id,
                 num_classes=self.conf.n_classes,
-                max_patches=n_tiles,
+                max_patches=self.conf.n_tiles,
                 include=self.conf.include_classes,
                 augment=self.conf.augment,
                 output_filename=stereo_pair_list[0],
@@ -276,24 +352,6 @@ class DSMPipeline(CNNRegression):
                 xp=np,
                 use_case='regression'
             )
-
-        return
-
-    # -------------------------------------------------------------------------
-    # preprocess
-    # -------------------------------------------------------------------------
-    def preprocess(self):
-        """
-        Perform general preprocessing.
-        TODO: FIX TREE MASK TO TAKE ON LANDCOVER INPUT IF MORE THAN TWO CLASSES
-        """
-        logging.info('Starting preprocessing stage')
-
-        # Generate WorldView vs. ICESAT-2 footprint (geopackages with matches)
-        self.gen_intersection_database()
-
-        # Iterate over the previously saved intersection files, generate tiles
-        self.gen_dataset_tiles()
 
         # Calculate mean and std values for training
         data_filenames = get_dataset_filenames(self.images_dir)
@@ -321,7 +379,5 @@ class DSMPipeline(CNNRegression):
         self.conf.standardization = current_standardization
 
         logging.info('Done with preprocessing stage')
-
-    def train_cgan(self):
-
+        """
         return

@@ -9,14 +9,17 @@ from tensorflow_caney.model.config.cnn_config import Config
 class DSMConfig(Config):
 
     # experiment name specific to this work
-    OPTIONS = ['stereo', 'disparity', 'stereo-disparity']
-    OPTIONS_ENUM = Enum("OPTIONS", {k: k for k in OPTIONS})
-    experiment_name: OPTIONS_ENUM = 'stereo'
+    EXPERIMENTS = ['stereo', 'disparity', 'stereo-disparity']
+    EXPERIMENTS_ENUM = Enum("Experiments", {k: k for k in EXPERIMENTS})
+    experiment_name: EXPERIMENTS_ENUM = MISSING
 
     # directories pointing to stereo output
     stereo_dirs: List[str] = field(default_factory=lambda: [])
 
-    # regex to read from stereo output directory
+    # The configurations below are regex to read from the data outputs
+    # trying to find stereo, disparity, and dsm outputs from stereo
+    # pipeline. Feel free to modify the regex values if the output
+    # from your stereo pipeline is different.
 
     # disparity map read, one file
     disparity_map_regex: str = 'out-F.tif'
@@ -32,3 +35,6 @@ class DSMConfig(Config):
 
     # high resolution DSM regex, one file
     highres_dsm_regex: str = 'out-DEM_1m.tif'
+
+    # number of tiles per scene
+    n_tiles: int = 10000
