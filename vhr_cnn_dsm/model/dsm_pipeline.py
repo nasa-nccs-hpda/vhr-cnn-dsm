@@ -134,7 +134,7 @@ class DSMPipeline(CNNRegression):
             # output filename for stereo pair stack
             output_filename = \
                 f'{Path(stereo_pair_list[0]).with_suffix("")}_stacked.tif'
-        """
+
             # -----------------------------------------------------------------
             # prepare experiments with stereo pairs
             # -----------------------------------------------------------------
@@ -379,5 +379,5 @@ class DSMPipeline(CNNRegression):
         self.conf.standardization = current_standardization
 
         logging.info('Done with preprocessing stage')
-        """
+
         return

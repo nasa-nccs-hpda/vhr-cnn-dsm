@@ -5,7 +5,7 @@
 # ----------------------------- General ----------------------------------- #
 # experiment name and type
 experiment_name: disparity
-experiment_type: cnn-dsm-disparity-v1
+experiment_type: cnn-dsm-disparity
 
 # seed to avoid randomization across experiments
 seed: 42
@@ -22,7 +22,7 @@ xla: False
 # -------------------- Directory Configurations --------------------------- #
 
 # directory to store output data
-data_dir: '/lscratch/jacaraba/cnn-dem/regression-test'
+data_dir: '/lscratch/${oc.env:USER}/cnn-dem/regression-test'
 
 # directories where stereo pair outputs is at
 stereo_dirs:

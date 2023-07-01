@@ -56,7 +56,7 @@ We will use the following steps to map the DSM truth values for training:
 ## Singularity Commands
 
 ```bash
-singularity exec --env PYTHONPATH="/explore/nobackup/people/jacaraba/development/vhr-cnn-dsm:/explore/nobackup/people/jacaraba/development/tensorflow-caney" --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/jacaraba/container/tensorflow-caney python /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/vhr_cnn_dsm/view/dsm_pipeline_cli.py -c /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/projects/cnn-dsm/configs/cnn_dsm.yaml -s setup
+singularity exec --env PYTHONPATH="/explore/nobackup/people/jacaraba/development/vhr-cnn-dsm:/explore/nobackup/people/jacaraba/development/tensorflow-caney" --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/jacaraba/container/tensorflow-caney python /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/vhr_cnn_dsm/view/dsm_pipeline_cli.py -c /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/projects/cnn-dsm/configs/cnn_dsm.yaml -s preprocess train predict
 ```
 
 ## Tests

@@ -22,7 +22,7 @@ xla: False
 # -------------------- Directory Configurations --------------------------- #
 
 # directory to store output data
-data_dir: '/lscratch/jacaraba/cnn-dem/regression-test'
+data_dir: '/lscratch/jacaraba/cnn-dem/regression-test-2'
 
 # directories where stereo pair outputs is at
 stereo_dirs:
@@ -31,7 +31,7 @@ stereo_dirs:
   - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/WV03_20160616_104001001EBDB400_104001001E13F600'
 
 # directory to store models
-model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-stereo-disparity-v1'
+model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-stereo-disparity-v2'
 
 # ------------------------- Setup Configurations -------------------------- #
 
@@ -78,7 +78,7 @@ output_bands:
 # ---------------------- Training Configurations -------------------------- #
 
 # standardization functions: local, global, mixed
-standardization: 'local'
+#standardization: 'local'
 
 # normalize label value, value of the tallest tree
 #normalize_label: 250.0
