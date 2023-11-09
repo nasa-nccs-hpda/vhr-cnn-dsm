@@ -1,6 +1,6 @@
 # Optimizing DEM generation from spaceborne VHR imagery
 
-[![DOI](https://zenodo.org/badge/474016543.svg)](https://zenodo.org/badge/latestdoi/474016543)
+[![DOI](https://zenodo.org/badge/600075861.svg)](https://zenodo.org/doi/10.5281/zenodo.10091998)
 ![CI Workflow](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/ci.yml/badge.svg)
 ![CI to DockerHub ](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/dockerhub.yml/badge.svg)
 ![Code style: PEP8](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/lint.yml/badge.svg)
@@ -74,4 +74,10 @@ singularity exec --env PYTHONPATH="development/vhr-cnn-dsm:development/tensorflo
     --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people \
     tensorflow-caney-container python \
     -m pytest /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/tests
+```
+
+## Citing this Software
+
+```bash
+Jordan Alexis Caraballo-Vega, “nasa-nccs-hpda/vhr-cnn-dsm: DOI Generation”. Zenodo, Nov. 09, 2023. doi: 10.5281/zenodo.10091999.
 ```
