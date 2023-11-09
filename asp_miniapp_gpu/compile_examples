@@ -1,0 +1,14 @@
+GPU GDAL:
+nvcc -std=c++17 src/tif_block_match_gpu.cc src/BlockMatcherGPU.cu -o tif_block_match_gpu -lnvToolsExt -I/explore/nobackup/people/cssprad1/micromamba/envs/aspv2/include -lgdal
+
+CPU GDAL:
+nvcc -std=c++17 src/tif_block_match_cpu.cc src/BlockMatcherCPU.cc -o tif_block_match_cpu -lnvToolsExt -I/explore/nobackup/people/cssprad1/micromamba/envs/aspv2/include -lgdal
+
+CPU:
+nvcc -std=c++17 src/test_blockmatcherCPU.cc src/BlockMatcherCPU.cc -o test_cpu
+
+GPU:
+nvcc -std=c++17 src/test_blockmatcherGPU.cc src/BlockMatcherGPU.cu -o test_gpu
+
+both in one test:
+nvcc -std=c++17 src/blockmatcher_test.cc src/BlockMatcherGPU.cu src/BlockMatcherCPU.cc -o test_all

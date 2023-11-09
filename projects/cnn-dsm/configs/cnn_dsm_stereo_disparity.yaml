@@ -5,7 +5,7 @@
 # ----------------------------- General ----------------------------------- #
 # experiment name and type
 experiment_name: stereo-disparity
-experiment_type: cnn-dsm-v7
+experiment_type: cnn-dsm-stereo-disparity
 
 # seed to avoid randomization across experiments
 seed: 42
@@ -22,7 +22,7 @@ xla: False
 # -------------------- Directory Configurations --------------------------- #
 
 # directory to store output data
-data_dir: '/lscratch/jacaraba/cnn-dem/regression-test'
+data_dir: '/lscratch/jacaraba/cnn-dem/regression-test-2'
 
 # directories where stereo pair outputs is at
 stereo_dirs:
@@ -31,7 +31,7 @@ stereo_dirs:
   - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/WV03_20160616_104001001EBDB400_104001001E13F600'
 
 # directory to store models
-model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-v4'
+model_dir: '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-stereo-disparity-v2'
 
 # ------------------------- Setup Configurations -------------------------- #
 
@@ -53,8 +53,10 @@ expand_dims: True
 include_classes: True
 
 # modify label masks
-modify_labels:
-  - "x < 0": 0
+#modify_labels:
+#  - "x < 0": 0
+
+n_tiles: 10000
 
 # perform data augmentation on tiles
 augment: True
@@ -63,16 +65,20 @@ augment: True
 input_bands:
   - Mosaic1
   - Mosaic2
+  - DisparityL
+  - DisparityR
 
 # output bands to train the model on
 output_bands:
   - Mosaic1
   - Mosaic2
+  - DisparityL
+  - DisparityR
 
 # ---------------------- Training Configurations -------------------------- #
 
 # standardization functions: local, global, mixed
-standardization: 'local'
+#standardization: 'local'
 
 # normalize label value, value of the tallest tree
 #normalize_label: 250.0
@@ -97,13 +103,13 @@ max_epochs: 6000
 patience: 10
 
 # model to use
-#model: "tfc.model.networks.regression.regression_unet.unet_batchnorm_regression(nclass=1, input_size=(128, 128, 2),maps=[16, 32, 64, 128, 256])"
-model: 'tfc.model.networks.regression.regression_unet.unet_batchnorm_regression(nclass=1, input_size=(256, 256, 2), maps=[64, 128, 256, 512, 1024],final_activation="linear")'
+model: 'tfc.model.networks.regression.regression_unet.unet_batchnorm_regression(nclass=1, input_size=(256, 256, 4), maps=[64, 128, 256, 512, 1024],final_activation="linear")'
 
 
 # loss function to use
 #loss: 'tf.keras.losses.MeanSquaredError()' # no luck
-loss: 'tf.keras.losses.MeanAbsoluteError()'
+#loss: 'tf.keras.losses.MeanAbsoluteError()'
+loss: 'tf.keras.losses.MeanSquaredError()'
 
 # optimizer to use
 optimizer: tf.keras.optimizers.Adam
@@ -128,7 +134,6 @@ prediction_dtype: float32
 prediction_nodata: -10001
 
 #model_filename: '/explore/nobackup/people/jacaraba/projects/CNN_CHM/v2/senegal/models/20-0.00.hdf5'
-inference_save_dir: /explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/development/dsm-test-v7-mae/results
+inference_save_dir: '${model_dir}/results'
 inference_regex_list:
-  - '/explore/nobackup/projects/ilab/projects/AIML_CHM/DEM_CHM/data/WV02_20120924_P1BS_103001001C087E00_103001001CB20900-toa-stacked-clipped.tif'
-  - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/*/*stacked*.tif'
+  - '/explore/nobackup/people/pmontesa/outASP/cnn_mode_test/*/stack_all_bands.tif'
