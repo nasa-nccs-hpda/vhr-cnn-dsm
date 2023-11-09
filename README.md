@@ -1,5 +1,12 @@
 # Optimizing DEM generation from spaceborne VHR imagery
 
+[![DOI](https://zenodo.org/badge/474016543.svg)](https://zenodo.org/badge/latestdoi/474016543)
+![CI Workflow](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/ci.yml/badge.svg)
+![CI to DockerHub ](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/dockerhub.yml/badge.svg)
+![Code style: PEP8](https://github.com/nasa-nccs-hpda/vhr-cnn-dsm/actions/workflows/lint.yml/badge.svg)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Coverage Status](https://coveralls.io/repos/github/nasa-nccs-hpda/vhr-cnn-dsm/badge.svg?branch=main)](https://coveralls.io/github/nasa-nccs-hpda/vhr-cnn-dsm?branch=main)
+
 The use of stereo imagery to generate 3D surface structures is important to a variety of earth science investigations. Stereo image analysis generates surface and elevation estimates that are crucial to the monitoring of vegetation, safe satellites landing, disaster monitoring, and many other applications that rely on such data at high resolutions. The general methodology to generate digital surface models (DSM) relies on pairing the stereo imagery and performing expensive geometrical physics-based computations to correlate individual pixels to extract local elevations. The NASA Ames Stereo Pipeline (ASP) software follows this procedure at a production level. This software has been heavily optimized to be parallelized using many CPUs. However, the process of estimating elevations in many cases can take more than 10 hours using multi-node and multi-CPU resources. Given the active migration of compute to the commercial cloud, linear CPU acceleration is not enough to maintain costs at a reasonable level for running this type of software at scale. In this work we tested two avenues to accelerate current DSM generation workflows. The first line of research was to test the viability of using physics-informed machine learning models to replace the physics-based computations done by ASP to accelerate the DSM computation process. The second line of research was to optimize the key process of calculating disparity maps for DSMs using CUDA and OpenACC, decreasing this way the use of many CPU resources. This second line of research was done as part of a co-sponsored NVIDIA and NASA GPU Hackathon. Results show these two lines of research as promising avenues to accelerate the acquisition of near real-time elevations. 
 
 ## Dataset Archive
