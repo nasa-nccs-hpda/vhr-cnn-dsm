@@ -32,6 +32,16 @@ We used the following steps to map the DSM truth values for training:
 - Interpolate to fill other holes
 - Resample to the same grid as that of the prediction stack
 
+## Downloading the Container
+
+The container for this work can be downloaded from DockerHub. The container is deployed on a weekly basis
+to take care of potential OS vulnerabilities. All CPU and GPU dependencies are baked into the container image
+for end-to-end processing.
+
+```bash
+singularity build --sandbox /lscratch/$USER/container/tensorflow-caney docker://nasanccs/tensorflow-caney:latest
+```
+
 ## Running the Entire Pipeline
 
 Below is the command to run the entire deep learning pipeline. It includes a preprocessing, training, and 
@@ -40,7 +50,7 @@ prediction step.
 ```bash
 singularity exec --env PYTHONPATH="development/vhr-cnn-dsm:development/tensorflow-caney" \
     --nv -B $directories_to_mount_inside_the_container \
-    /lscratch/jacaraba/container/tensorflow-caney \
+    tensorflow-caney-container \
     python vhr-cnn-dsm/vhr_cnn_dsm/view/dsm_pipeline_cli.py 
     -c vhr-cnn-dsm/projects/cnn-dsm/configs/cnn_dsm.yaml \
     -s preprocess train predict
@@ -55,6 +65,6 @@ need GPUs to run this test workflow.
 ```bash
 singularity exec --env PYTHONPATH="development/vhr-cnn-dsm:development/tensorflow-caney" \
     --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people \
-    /lscratch/jacaraba/container/tensorflow-caney python \
+    tensorflow-caney-container python \
     -m pytest /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/tests
 ```
