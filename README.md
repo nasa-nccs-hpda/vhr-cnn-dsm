@@ -76,6 +76,13 @@ singularity exec --env PYTHONPATH="development/vhr-cnn-dsm:development/tensorflo
     -m pytest /explore/nobackup/people/jacaraba/development/vhr-cnn-dsm/tests
 ```
 
+## GPU Implementation
+
+THe DSG group has worked to implement a GPU (CUDA) implementation of the block-matching algorithm used to calculate disparity maps through Ames Stereo Pipeline (ASP).
+
+Learn more: https://nasa-nccs-hpda.github.io/blockmatchgpu
+Repo: https://github.com/nasa-nccs-hpda/blockmatchgpu
+
 ## Citing this Software
 
 ```bash
